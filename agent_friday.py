@@ -29,7 +29,7 @@ from livekit.plugins import google as lk_google, openai as lk_openai, sarvam, si
 # ---------------------------------------------------------------------------
 
 STT_PROVIDER       = "sarvam"
-LLM_PROVIDER       = "gemini"
+LLM_PROVIDER = "openai"
 TTS_PROVIDER       = "openai"
 
 GEMINI_LLM_MODEL   = "gemini-2.5-flash"
@@ -37,8 +37,7 @@ OPENAI_LLM_MODEL   = "gpt-4o"
 
 OPENAI_TTS_MODEL   = "tts-1"
 OPENAI_TTS_VOICE   = "nova"       # "nova" has a clean, confident female tone
-TTS_SPEED           = 1.15
-
+TTS_SPEED           = 0.90
 SARVAM_TTS_LANGUAGE = "en-IN"
 SARVAM_TTS_SPEAKER  = "rahul"
 
@@ -204,7 +203,7 @@ def _build_stt():
     if STT_PROVIDER == "sarvam":
         logger.info("STT → Sarvam Saaras v3")
         return sarvam.STT(
-            language="unknown",
+            language="en-IN",
             model="saaras:v3",
             mode="transcribe",
             flush_signal=True,
@@ -213,7 +212,6 @@ def _build_stt():
     elif STT_PROVIDER == "whisper":
         logger.info("STT → OpenAI Whisper")
         return lk_openai.STT(model="whisper-1")
-    else:
         raise ValueError(f"Unknown STT_PROVIDER: {STT_PROVIDER!r}")
 
 
@@ -221,9 +219,18 @@ def _build_llm():
     if LLM_PROVIDER == "openai":
         logger.info("LLM → OpenAI (%s)", OPENAI_LLM_MODEL)
         return lk_openai.LLM(model=OPENAI_LLM_MODEL)
+
     elif LLM_PROVIDER == "gemini":
         logger.info("LLM → Google Gemini (%s)", GEMINI_LLM_MODEL)
-        return lk_google.LLM(model=GEMINI_LLM_MODEL, api_key=os.getenv("GOOGLE_API_KEY"))
+
+        print("GOOGLE_API_KEY =", os.getenv("GOOGLE_API_KEY"))
+        print("MODEL =", GEMINI_LLM_MODEL)
+
+        return lk_google.LLM(
+            model=GEMINI_LLM_MODEL,
+            api_key=os.getenv("GOOGLE_API_KEY")
+        )
+
     else:
         raise ValueError(f"Unknown LLM_PROVIDER: {LLM_PROVIDER!r}")
 
