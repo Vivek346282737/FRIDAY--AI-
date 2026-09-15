@@ -1,26 +1,20 @@
-\# 🤖 FRIDAY AI — Autonomous Multimodal Agent \& MCP Engine
-
-\### \*Desktop Vision Perception, Multi-Step Orchestration, and System-Level Automation\*
+\# 🤖 FRIDAY AI
 
 
 
-\[!\[Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python\&logoColor=white)](https://www.python.org/)
-
-\[!\[FastAPI Engine](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com)
-
-\[!\[Protocol Specification](https://img.shields.io/badge/Architecture-Model%20Context%20Protocol%20(MCP)-orange.svg)](https://modelcontextprotocol.io/)
-
-\[!\[Deep Learning Runtime](https://img.shields.io/badge/Inference-PyTorch%20%2F%20Quantized%20Tensors-EE4C2C.svg?logo=pytorch\&logoColor=white)](https://pytorch.org/)
-
-\[!\[Concurrency](https://img.shields.io/badge/Concurrency-AsyncIO%20%2F%20Non--Blocking-darkgreen.svg)]()
-
-\[!\[Build \& Packaging](https://img.shields.io/badge/Packaging-uv%20%2F%20pyproject.toml-blueviolet.svg)](https://github.com/astral-sh/uv)
-
-\[!\[License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+Python-based desktop and browser automation assistant integrating Model Context Protocol (MCP), LLM-driven planning, and local OS execution.
 
 
 
-\*\*FRIDAY AI\*\* is an asynchronous, modular AI agent framework engineered in Python using \*\*FastAPI\*\* and the \*\*Model Context Protocol (MCP)\*\*. It bridges modern reasoning engines (LLMs / Multimodal Vision models) with deterministic local environments, enabling persistent memory state-machines, automated browser workflows, dynamic tool resolution, and automated OS-level desktop execution through structured perception-action feedback loops.
+\[!\[Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python\&logoColor=white)](https://www.python.org/)
+
+\[!\[FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?logo=fastapi\&logoColor=white)](https://fastapi.tiangolo.com/)
+
+\[!\[MCP](https://img.shields.io/badge/Protocol-MCP-orange)](https://modelcontextprotocol.io/)
+
+\[!\[PyTorch](https://img.shields.io/badge/PyTorch-Inference-EE4C2C?logo=pytorch\&logoColor=white)](https://pytorch.org/)
+
+\[!\[SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite\&logoColor=white)](https://www.sqlite.org/)
 
 
 
@@ -28,27 +22,15 @@
 
 
 
-\## 📑 Table of Contents
+\## Overview
 
-\- \[Architectural Overview](#-architectural-overview)
 
-\- \[System Dataflow \& Component Architecture](#-system-dataflow--component-architecture)
 
-\- \[Core Engineering Features](#-core-engineering-features)
+\*\*FRIDAY AI\*\* is an extensible personal assistant and execution engine designed to automate desktop and web tasks via natural language. Instead of relying solely on conversational replies, FRIDAY breaks user requests into structured action plans and executes them through dedicated browser controllers, OS interaction routines, and MCP-compliant tools.
 
-\- \[Languages, Frameworks \& Tooling Stack](#-languages-frameworks--tooling-stack)
 
-\- \[Directory \& Repository Structure](#-directory--repository-structure)
 
-\- \[Verified Execution Traces (Live Logs)](#-verified-execution-traces-live-logs)
-
-\- \[Installation \& Environment Setup](#-installation--environment-setup)
-
-\- \[API Reference \& Endpoints](#-api-reference--endpoints)
-
-\- \[Operational Guardrails \& Safety Mechanisms](#-operational-guardrails--safety-mechanisms)
-
-\- \[License \& Contributions](#-license--contributions)
+The core pipeline combines an LLM reasoning engine (Gemini/OpenAI compatible) with local agents responsible for browser workflows (Chrome orchestration, navigation, search), system operations (app launch, window focus, hardware metrics), and assistive coding tasks. State and execution history are tracked locally using SQLite.
 
 
 
@@ -56,21 +38,23 @@
 
 
 
-\## 🏛️ Architectural Overview
+\## Key Capabilities
 
 
 
-Most standard LLM implementations operate as reactive wrappers lacking state awareness, runtime safety rails, and tool modularity. \*\*FRIDAY AI\*\* addresses these bottlenecks through a modular subsystem architecture:
+\- \*\*Task Planning \& Workflow Execution\*\* — Decomposes multi-step prompts into sequential operations (e.g., open app, delay, navigate, scroll).
 
+\- \*\*Browser Automation Subsystem\*\* — Controls Chrome sessions, searches engines, navigates URLs, and handles viewport scrolling.
 
+\- \*\*Desktop \& System Services\*\* — Launches native applications, tracks window focus, and monitors system resources (CPU, memory, processes).
 
-1\. \*\*Decoupled Architecture:\*\* Strict separation between Agent Controller logic (`agent\_friday.py`), API Distribution Layer (`api\_server.py`), and Extensible MCP Tool Handlers (`server.py`).
+\- \*\*Model Context Protocol (MCP) Server\*\* — Implements standard MCP interfaces (`ListToolsRequest`, `CallToolRequest`) over SSE transports for standardized tool execution.
 
-2\. \*\*Model Context Protocol (MCP) Standard:\*\* Exposes and discovers operational tools dynamically without modifying core prompt templates.
+\- \*\*FastAPI HTTP \& SSE Backend\*\* — Exposes REST endpoints (`/chat`, `/system`, `/docs`) and streaming event endpoints for external clients.
 
-3\. \*\*Execution Subsystem (`ai.executor`):\*\* Dispatches deterministic system actions (Browser controls, process hooks, shell invocations) with structured JSON receipts.
+\- \*\*Local State Tracking\*\* — Persists agent activity and sessions via a local SQLite database (`friday.db`).
 
-4\. \*\*Low-Latency Vision Percepts:\*\* Coordinates desktop screen analysis, coordinate mapping, and non-blocking peripheral inputs.
+\- \*\*Safety Fail-Safes\*\* — Incorporates mouse position safeguards (PyAutoGUI fail-safe) and exception isolation across individual actions.
 
 
 
@@ -78,79 +62,57 @@ Most standard LLM implementations operate as reactive wrappers lacking state awa
 
 
 
-\## 🔄 System Dataflow \& Component Architecture
+\## Architecture
 
 
 
-```text
+```mermaid
 
-+---------------------------------------------------------------------------------+
+flowchart TD
 
-|                          CLIENT \& PERIPHERAL CHANNELS                           |
+&#x20;   User(\[User / Client]) --> API\[FastAPI Server / CLI Interface]
 
-|       (Interactive CLI / Terminal  •  FastAPI REST Endpoints  •  System Triggers) |
+&#x20;   API --> Core\[FRIDAY Agent Core]
 
-+----------------------------------------┬----------------------------------------+
+&#x20;   
 
-&#x20;                                        │
+&#x20;   subgraph Reasoning \& Planning
 
-&#x20;                                        ▼
+&#x20;       Core --> Planner\[Workflow Planner \& Intent Parser]
 
-+---------------------------------------------------------------------------------+
+&#x20;       Planner --> LLM\[LLM Reasoning Layer: Gemini / OpenAI API]
 
-|                       WEB ROUTING \& API LAYER (api\_server.py)                   |
+&#x20;   end
 
-|   • FastAPI Async ASGI Core            • Pydantic V2 Strict Validation Schema   |
 
-|   • Request Lifecycle Middleware       • Non-blocking Coroutine Worker Pools    |
 
-+----------------------------------------┬----------------------------------------+
+&#x20;   subgraph Tooling \& Protocol
 
-&#x20;                                        │
+&#x20;       Core --> MCPServer\[MCP Server: server.py]
 
-&#x20;                                        ▼
+&#x20;       MCPServer --> ToolRegistry\[Tool Dispatcher \& SSE Handlers]
 
-+---------------------------------------------------------------------------------+
+&#x20;   end
 
-|                       AGENT ORCHESTRATOR (agent\_friday.py)                      |
 
-|   • Plan-and-Solve Reasoning Loop      • Task Graph \& Dependency Resolution     |
 
-|   • Conversational Context Sliding     • Multimodal Screen State Ingestion      |
+&#x20;   subgraph Execution Layer
 
-+-------------------┬-----------------------------------------┬--------------------+
+&#x20;       Core --> Executor\[Action Executor: ai/executor.py]
 
-&#x20;                   │                                         │
+&#x20;       Executor --> Browser\[Browser Agent: Chrome \& Navigation]
 
-&#x20;                   ▼                                         ▼
+&#x20;       Executor --> Desktop\[Desktop Agent: Window \& App Controller]
 
-+---------------------------------------+ +---------------------------------------+
+&#x20;       Executor --> System\[System Services: Process \& Resource Monitor]
 
-|        REASONING PROVIDER (LLM)       | |        MCP RUNTIME (server.py)        |
+&#x20;   end
 
-|  • Google GenAI (Gemini) SDK          | |  • Dynamic Tool Schema Discovery     |
 
-|  • Groq Fast Inference Backing        | |  • Deterministic Execution Sandbox    |
 
-|  • Structured JSON Tool Signatures    | |  • Context Isolation \& State Handling |
+&#x20;   subgraph Persistence
 
-+---------------------------------------+ +-------------------┬-------------------+
+&#x20;       Core --> DB\[(SQLite: database/friday.db)]
 
-&#x20;                                                             │
-
-&#x20;                                                             ▼
-
-&#x20;                                         +---------------------------------------+
-
-&#x20;                                         |      EXECUTION ENGINE (ai.executor)   |
-
-&#x20;                                         |  • Browser Automation (Chrome/Focus)  |
-
-&#x20;                                         |  • PyAutoGUI Peripheral Manipulation  |
-
-&#x20;                                         |  • PyTorch Quantized Tensors Subsystem|
-
-&#x20;                                         |  • Subprocess Shell Invocations       |
-
-&#x20;                                         +---------------------------------------+
+&#x20;   end
 
