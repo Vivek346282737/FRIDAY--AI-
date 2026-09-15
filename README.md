@@ -48,11 +48,11 @@ The core pipeline combines an LLM reasoning engine (Gemini/OpenAI compatible) wi
 
 \- \*\*Desktop \& System Services\*\* — Launches native applications, tracks window focus, and monitors system resources (CPU, memory, processes).
 
-\- \*\*Model Context Protocol (MCP) Server\*\* — Implements standard MCP interfaces (`ListToolsRequest`, `CallToolRequest`) over SSE transports for standardized tool execution.
+\- \*\*Model Context Protocol (MCP) Server\*\* — Implements standard MCP interfaces (ListToolsRequest, CallToolRequest) over SSE transports for standardized tool execution.
 
-\- \*\*FastAPI HTTP \& SSE Backend\*\* — Exposes REST endpoints (`/chat`, `/system`, `/docs`) and streaming event endpoints for external clients.
+\- \*\*FastAPI HTTP \& SSE Backend\*\* — Exposes REST endpoints (/chat, /system, /docs) and streaming event endpoints for external clients.
 
-\- \*\*Local State Tracking\*\* — Persists agent activity and sessions via a local SQLite database (`friday.db`).
+\- \*\*Local State Tracking\*\* — Persists agent activity and sessions via a local SQLite database (friday.db).
 
 \- \*\*Safety Fail-Safes\*\* — Incorporates mouse position safeguards (PyAutoGUI fail-safe) and exception isolation across individual actions.
 
@@ -70,49 +70,49 @@ The core pipeline combines an LLM reasoning engine (Gemini/OpenAI compatible) wi
 
 flowchart TD
 
-&#x20;   User(\[User / Client]) --> API\[FastAPI Server / CLI Interface]
+&#x20;   User\["User / Client"] --> API\["FastAPI Server / CLI Interface"]
 
-&#x20;   API --> Core\[FRIDAY Agent Core]
-
-&#x20;   
-
-&#x20;   subgraph Reasoning \& Planning
-
-&#x20;       Core --> Planner\[Workflow Planner \& Intent Parser]
-
-&#x20;       Planner --> LLM\[LLM Reasoning Layer: Gemini / OpenAI API]
-
-&#x20;   end
+&#x20;   API --> Core\["FRIDAY Agent Core"]
 
 
 
-&#x20;   subgraph Tooling \& Protocol
+&#x20;   subgraph Reasoning\["Reasoning and Planning"]
 
-&#x20;       Core --> MCPServer\[MCP Server: server.py]
+&#x20;       Core --> Planner\["Workflow Planner and Intent Parser"]
 
-&#x20;       MCPServer --> ToolRegistry\[Tool Dispatcher \& SSE Handlers]
+&#x20;       Planner --> LLM\["LLM Reasoning Layer (Gemini / OpenAI API)"]
 
 &#x20;   end
 
 
 
-&#x20;   subgraph Execution Layer
+&#x20;   subgraph Tooling\["Tooling and Protocol"]
 
-&#x20;       Core --> Executor\[Action Executor: ai/executor.py]
+&#x20;       Core --> MCPServer\["MCP Server (server.py)"]
 
-&#x20;       Executor --> Browser\[Browser Agent: Chrome \& Navigation]
-
-&#x20;       Executor --> Desktop\[Desktop Agent: Window \& App Controller]
-
-&#x20;       Executor --> System\[System Services: Process \& Resource Monitor]
+&#x20;       MCPServer --> ToolRegistry\["Tool Dispatcher and SSE Handlers"]
 
 &#x20;   end
 
 
 
-&#x20;   subgraph Persistence
+&#x20;   subgraph Execution\["Execution Layer"]
 
-&#x20;       Core --> DB\[(SQLite: database/friday.db)]
+&#x20;       Core --> Executor\["Action Executor (ai/executor.py)"]
+
+&#x20;       Executor --> Browser\["Browser Agent (Chrome and Navigation)"]
+
+&#x20;       Executor --> Desktop\["Desktop Agent (Window and App Controller)"]
+
+&#x20;       Executor --> System\["System Services (Process and Resource Monitor)"]
+
+&#x20;   end
+
+
+
+&#x20;   subgraph Persistence\["Persistence"]
+
+&#x20;       Core --> DB\[("SQLite (database/friday.db)")]
 
 &#x20;   end
 
