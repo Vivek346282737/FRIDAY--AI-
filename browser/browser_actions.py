@@ -1,4 +1,8 @@
-from browser.browser_controller import browser
+﻿from browser.browser_controller import browser
+
+
+def start_browser():
+    return browser.start()
 
 
 def open_website(url: str):
@@ -13,8 +17,22 @@ def click_text(text: str):
     return browser.click_text(text)
 
 
-def fill_input(selector: str, value: str):
-    return browser.fill(selector, value)
+def click_selector(selector: str):
+    return browser.click_selector(selector)
+
+
+def fill_input(
+    selector: str,
+    value: str
+):
+    return browser.fill(
+        selector,
+        value
+    )
+
+
+def type_text(text: str):
+    return browser.type_text(text)
 
 
 def press_key(key: str):
@@ -25,28 +43,37 @@ def scroll_page(pixels=1000):
     return browser.scroll(pixels)
 
 
+def wait_seconds(seconds=1):
+    return browser.wait(seconds)
+
+
 def read_page():
-    return {
-        "success": True,
-        "text": browser.page_text()
-    }
+    return browser.page_text()
 
 
-def take_screenshot(path="browser.png"):
+def verify_text(text: str):
+    return browser.contains_text(text)
+
+
+def take_screenshot(path=None):
     return browser.screenshot(path)
 
 
 def current_url():
-    return {
-        "success": True,
-        "url": browser.current_url()
-    }
+    return browser.current_url()
+
+
+def go_back():
+    return browser.back()
+
+
+def go_forward():
+    return browser.forward()
+
+
+def refresh_page():
+    return browser.refresh()
 
 
 def close_browser():
-    browser.close()
-
-    return {
-        "success": True,
-        "message": "Browser closed successfully."
-    }
+    return browser.close()

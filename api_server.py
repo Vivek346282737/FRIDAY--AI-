@@ -1,11 +1,12 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from server import mcp
 
 from services.system_service import get_system_info
 from services.process_service import open_app, close_app
 
-from agent.agent_loop import agent_loop
+from friday_core import process_message
 
 from ai.memory import extract_memory
 from ai.conversation import conversation
@@ -13,6 +14,9 @@ from ai.conversation import conversation
 from memory.manager import memory_manager
 
 app = FastAPI(title="FRIDAY API")
+
+# Mount MCP SSE server
+app.mount("/sse", mcp.sse_app())
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,7 +57,7 @@ class ForgetRequest(BaseModel):
 def home():
 
     return {
-        "message": "FRIDAY API Running 🚀"
+        "message": "FRIDAY API Running ðŸš€"
     }
 
 
@@ -110,15 +114,15 @@ def chat(data: ChatRequest):
         )
 
     # Run Agent Loop
-    result = agent_loop.run(
+    result = process_message(
         data.message,
         memory_text,
         conversation.get_history()
     )
 
     # Save final AI reply
-    if result.get("reply"):
-        conversation.add_ai(result["reply"])
+    if result.get("message"):
+        conversation.add_ai(result["message"])
 
     return result
 
@@ -147,3 +151,4 @@ def recall(category: str = None):
 def forget(data: ForgetRequest):
 
     return memory_manager.forget(data.key)
+

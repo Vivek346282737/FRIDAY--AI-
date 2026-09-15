@@ -22,4 +22,23 @@ memory/
 
 # OS
 .DS_Store
-Thumbs.db
+Thumbs.db.env
+.env.*
+!.env.example
+
+*.bak
+*.db
+*.sqlite
+*.sqlite3
+
+backups/
+__pycache__/
+*.pyc
+
+current_*.txt
+latest_*.txt
+*_current.txt
+executor_current.txt
+
+.venv/
+venv/

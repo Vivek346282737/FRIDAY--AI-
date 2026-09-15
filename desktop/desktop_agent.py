@@ -1,114 +1,203 @@
-from desktop.desktop_actions import (
+﻿from desktop.desktop_actions import (
     move_mouse,
+    move_mouse_to,
     left_click,
     double_click,
     right_click,
+    click_at,
+    double_click_at,
+    right_click_at,
     type_text,
     press_key,
     press_hotkey,
     screenshot,
     screen_size,
     mouse_position,
+    scroll,
     scroll_up,
     scroll_down,
+    wait,
+    execute_sequence,
 )
 
 
 class DesktopAgent:
 
-    def execute(self, instruction: str):
+    def execute(self, instruction):
 
-        text = instruction.strip()
+        if isinstance(instruction, list):
+
+            return execute_sequence(
+                instruction
+            )
+
+        if isinstance(instruction, dict):
+
+            steps = instruction.get("steps")
+
+            if isinstance(steps, list):
+
+                return execute_sequence(
+                    steps
+                )
+
+            return {
+                "success": False,
+                "message": (
+                    "Desktop dictionary must "
+                    "contain a steps list."
+                )
+            }
+
+        if not instruction:
+
+            return {
+                "success": False,
+                "message": (
+                    "Desktop instruction is empty."
+                )
+            }
+
+        text = str(
+            instruction
+        ).strip()
+
         lower = text.lower()
 
-        # ====================================
-        # SCREENSHOT
-        # ====================================
-
         if lower == "screenshot":
-
             return screenshot()
 
-        # ====================================
-        # SCREEN SIZE
-        # ====================================
-
         if lower == "screen size":
-
             return screen_size()
 
-        # ====================================
-        # MOUSE POSITION
-        # ====================================
-
         if lower == "mouse position":
-
             return mouse_position()
 
-        # ====================================
-        # CLICK
-        # ====================================
-
         if lower == "click":
-
             return left_click()
 
         if lower == "double click":
-
             return double_click()
 
         if lower == "right click":
-
             return right_click()
 
-        # ====================================
-        # SCROLL
-        # ====================================
+        if lower.startswith("click at "):
 
-        if lower == "scroll up":
+            try:
 
-            return scroll_up()
+                parts = text[9:].split()
 
-        if lower == "scroll down":
+                return click_at(
+                    int(parts[0]),
+                    int(parts[1])
+                )
 
-            return scroll_down()
+            except Exception as e:
 
-        # ====================================
-        # TYPE
-        # ====================================
+                return {
+                    "success": False,
+                    "message": (
+                        f"Invalid click coordinates: "
+                        f"{e}"
+                    )
+                }
+
+        if lower.startswith("double click at "):
+
+            try:
+
+                parts = text[16:].split()
+
+                return double_click_at(
+                    int(parts[0]),
+                    int(parts[1])
+                )
+
+            except Exception as e:
+
+                return {
+                    "success": False,
+                    "message": str(e)
+                }
+
+        if lower.startswith("right click at "):
+
+            try:
+
+                parts = text[15:].split()
+
+                return right_click_at(
+                    int(parts[0]),
+                    int(parts[1])
+                )
+
+            except Exception as e:
+
+                return {
+                    "success": False,
+                    "message": str(e)
+                }
 
         if lower.startswith("type "):
 
-            return type_text(text[5:])
-
-        # ====================================
-        # PRESS
-        # ====================================
+            return type_text(
+                text[5:]
+            )
 
         if lower.startswith("press "):
 
-            key = text[6:].strip()
-
-            return press_key(key)
-
-        # ====================================
-        # HOTKEY
-        # ====================================
+            return press_key(
+                text[6:].strip()
+            )
 
         if lower.startswith("hotkey "):
 
             keys = text[7:].split()
 
-            return press_hotkey(*keys)
+            return press_hotkey(
+                *keys
+            )
 
-        # ====================================
-        # MOVE
-        #
-        # Supports:
-        # move 500 300
-        # move mouse 500 300
-        # move mouse to 500 300
-        # ====================================
+        if lower.startswith("wait "):
+
+            try:
+
+                return wait(
+                    float(
+                        text[5:].strip()
+                    )
+                )
+
+            except Exception as e:
+
+                return {
+                    "success": False,
+                    "message": str(e)
+                }
+
+        if lower == "scroll up":
+            return scroll_up()
+
+        if lower == "scroll down":
+            return scroll_down()
+
+        if lower.startswith("scroll "):
+
+            try:
+
+                return scroll(
+                    int(
+                        text[7:].strip()
+                    )
+                )
+
+            except Exception as e:
+
+                return {
+                    "success": False,
+                    "message": str(e)
+                }
 
         if lower.startswith("move"):
 
@@ -116,17 +205,27 @@ class DesktopAgent:
 
                 cleaned = lower
 
-                cleaned = cleaned.replace("move mouse to", "")
-                cleaned = cleaned.replace("move mouse", "")
-                cleaned = cleaned.replace("move", "")
-                cleaned = cleaned.strip()
+                cleaned = cleaned.replace(
+                    "move mouse to",
+                    ""
+                )
 
-                parts = cleaned.split()
+                cleaned = cleaned.replace(
+                    "move mouse",
+                    ""
+                )
 
-                x = int(parts[0])
-                y = int(parts[1])
+                cleaned = cleaned.replace(
+                    "move",
+                    ""
+                )
 
-                return move_mouse(x, y)
+                parts = cleaned.strip().split()
+
+                return move_mouse_to(
+                    int(parts[0]),
+                    int(parts[1])
+                )
 
             except Exception as e:
 
@@ -137,7 +236,10 @@ class DesktopAgent:
 
         return {
             "success": False,
-            "message": "Unknown desktop instruction."
+            "message": (
+                f"Unknown desktop instruction: "
+                f"{text}"
+            )
         }
 
 

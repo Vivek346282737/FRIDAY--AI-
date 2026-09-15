@@ -1,124 +1,283 @@
-from services.process_service import open_app, close_app
-
-from browser.browser_agent import browser_agent
-from desktop.desktop_agent import desktop_agent
-from vision.vision_agent import vision_agent
-
-from coding.code_agent import code_agent
-
+﻿from ai.brain import brain
 from ai.executor import executor
+from ai.workflow_planner import workflow_planner
 
 
 class Coordinator:
 
-    def execute(self, instruction: str):
+    def __init__(self):
 
-        if not instruction:
+        self.history = []
 
-            return None
+    # =====================================================
+    # BUILD CONVERSATION CONTEXT
+    # =====================================================
 
-        text = instruction.strip()
+    def _build_conversation_context(
+        self,
+        limit=10
+    ):
 
-        upper = text.upper()
+        recent_history = self.history[-limit:]
 
-        # ==========================================
-        # ACTION PREFIX
-        # ==========================================
+        if not recent_history:
+            return ""
 
-        if upper.startswith("ACTION:"):
+        lines = []
 
-            payload = text[7:].strip()
+        for item in recent_history:
 
-        else:
-
-            payload = text
-
-        # ==========================================
-        # BROWSER
-        # ==========================================
-
-        if payload.upper().startswith("BROWSER:"):
-
-            return browser_agent.execute(
-                payload[8:].strip()
+            user_message = item.get(
+                "user",
+                ""
             )
 
-        # ==========================================
-        # DESKTOP
-        # ==========================================
-
-        if payload.upper().startswith("DESKTOP:"):
-
-            return desktop_agent.execute(
-                payload[8:].strip()
+            assistant_message = item.get(
+                "assistant",
+                ""
             )
 
-        # ==========================================
-        # VISION
-        # ==========================================
-
-        if payload.upper().startswith("VISION:"):
-
-            return vision_agent.execute(
-                payload[7:].strip()
+            lines.append(
+                f"User: {user_message}"
             )
 
-        # ==========================================
-        # CODE
-        # ==========================================
+            lines.append(
+                f"FRIDAY: {assistant_message}"
+            )
 
-        if payload.upper().startswith("CODE:"):
+        return "\n".join(lines)
 
-            command = payload[5:].strip()
+    # =====================================================
+    # MAIN PROCESS
+    # =====================================================
 
-            if command.lower().startswith("compile "):
+    def process(
+        self,
+        message: str,
+        memory: str = "",
+        conversation: str = ""
+    ):
 
-                file = command[8:].strip()
+        # -------------------------------------------------
+        # VALIDATE MESSAGE
+        # -------------------------------------------------
 
-                return code_agent.compile_python(file)
-
-            if command.lower().startswith("run "):
-
-                file = command[4:].strip()
-
-                return code_agent.execute_python(file)
-
-            if command.lower().startswith("fix "):
-
-                file = command[4:].strip()
-
-                return code_agent.fix_python_file(file)
+        if not message:
 
             return {
                 "success": False,
-                "message": "Unknown CODE action."
+                "message": "Please provide a message.",
+                "execution": None
             }
 
-        # ==========================================
-        # OPEN
-        # ==========================================
+        # -------------------------------------------------
+        # BUILD CONVERSATION CONTEXT
+        # -------------------------------------------------
 
-        if payload.upper().startswith("OPEN:"):
+        if not conversation:
 
-            app = payload[5:].strip()
+            conversation = (
+                self._build_conversation_context()
+            )
 
-            return open_app(app)
+        # =================================================
+        # 1. ASK BRAIN
+        # =================================================
 
-        # ==========================================
-        # CLOSE
-        # ==========================================
+        try:
 
-        if payload.upper().startswith("CLOSE:"):
+            ai_reply = brain.ask(
+                message,
+                memory,
+                conversation
+            )
 
-            app = payload[6:].strip()
+        except Exception as e:
 
-            return close_app(app)
+            return {
+                "success": False,
+                "message": (
+                    f"Brain error: {str(e)}"
+                ),
+                "execution": None
+            }
 
-        # ==========================================
-        # FALLBACK
-        # ==========================================
+        # =================================================
+        # 2. CREATE WORKFLOW PLAN
+        # =================================================
 
-        return executor.execute(text)
+        plan = workflow_planner.create_plan(
+            ai_reply
+        )
+
+        if not plan.get(
+            "success",
+            False
+        ):
+
+            final_message = (
+                "I understood the request, but "
+                "the generated action plan was invalid. "
+                + plan.get(
+                    "message",
+                    ""
+                )
+            )
+
+            self.history.append({
+                "user": message,
+                "assistant": final_message
+            })
+
+            return {
+                "success": False,
+                "message": final_message,
+                "ai_reply": ai_reply,
+                "plan": plan,
+                "execution": None
+            }
+
+        # =================================================
+        # 3. EXECUTE WORKFLOW
+        # =================================================
+
+        actions = plan.get(
+            "actions",
+            []
+        )
+
+        execution = None
+
+        if actions:
+
+            # IMPORTANT:
+            # Executor expects a dictionary containing
+            # the actions list, not the raw list itself.
+
+            workflow = {
+                "actions": actions
+            }
+
+            execution = (
+                executor.execute_workflow(
+                    workflow
+                )
+            )
+
+        # =================================================
+        # 4. BUILD INITIAL RESPONSE
+        # =================================================
+
+        final_message = ai_reply.get(
+            "message",
+            ""
+        )
+
+        if not final_message:
+
+            final_message = (
+                "I'm ready, boss."
+            )
+
+        # =================================================
+        # 5. HANDLE EXECUTION RESULT
+        # =================================================
+
+        if execution is not None:
+
+            if execution.get(
+                "success",
+                False
+            ):
+
+                if not ai_reply.get(
+                    "message"
+                ):
+
+                    final_message = (
+                        "The requested workflow "
+                        "was completed successfully."
+                    )
+
+            else:
+
+                error_message = execution.get(
+                    "message",
+                    "Workflow failed."
+                )
+
+                final_message = (
+                    "I couldn't complete the "
+                    "full workflow, boss. "
+                    f"{error_message}"
+                )
+
+        # =================================================
+        # 6. STORE HISTORY
+        # =================================================
+
+        self.history.append({
+
+            "user": message,
+
+            "assistant": final_message
+
+        })
+
+        # =================================================
+        # 7. FINAL RESPONSE
+        # =================================================
+
+        return {
+
+            "success": (
+
+                execution is None
+
+                or execution.get(
+                    "success",
+                    False
+                )
+
+            ),
+
+            "message": final_message,
+
+            "ai_reply": ai_reply,
+
+            "plan": plan,
+
+            "execution": execution
+
+        }
+
+    # =====================================================
+    # HISTORY
+    # =====================================================
+
+    def history_size(self):
+
+        return len(
+            self.history
+        )
+
+    def get_history(self):
+
+        return self.history
+
+    def clear_history(self):
+
+        self.history.clear()
+
+        return {
+
+            "success": True,
+
+            "message": (
+                "Conversation history cleared."
+            )
+
+        }
 
 
 coordinator = Coordinator()

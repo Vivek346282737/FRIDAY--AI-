@@ -14,112 +14,213 @@ class IntentType(str, Enum):
 
 class IntentDetector:
 
+    def __init__(self):
+
+        self.keywords = {
+
+            IntentType.CODING: [
+                "python",
+                "java",
+                "javascript",
+                "typescript",
+                "react",
+                "next",
+                "node",
+                "django",
+                "flask",
+                "fastapi",
+                "api",
+                "bug",
+                "error",
+                "exception",
+                "fix",
+                "debug",
+                "code",
+                "program",
+                "compile",
+                "function",
+                "class",
+                "method",
+                "module",
+                "library",
+                "package",
+                "git",
+                "github",
+                "sql",
+                "database",
+                "planner",
+                "executor",
+                "reasoner",
+                "router"
+            ],
+
+            IntentType.BROWSER: [
+                "browser",
+                "website",
+                "google",
+                "youtube",
+                "bing",
+                "duckduckgo",
+                "search",
+                "tab",
+                "url",
+                "google.com",
+                "youtube.com"
+            ],
+
+            IntentType.APP_CONTROL: [
+                "open",
+                "launch",
+                "start",
+                "run",
+                "close",
+                "exit",
+                "kill",
+                "stop"
+            ],
+
+            IntentType.FILE: [
+                "file",
+                "folder",
+                "directory",
+                "copy",
+                "move",
+                "rename",
+                "delete",
+                "pdf",
+                "excel",
+                "word",
+                "ppt",
+                "csv"
+            ],
+
+            IntentType.SYSTEM: [
+                "cpu",
+                "ram",
+                "battery",
+                "system",
+                "performance",
+                "storage",
+                "disk",
+                "network",
+                "wifi",
+                "gpu",
+                "temperature"
+            ],
+
+            IntentType.MEMORY: [
+                "remember",
+                "memorize",
+                "my name",
+                "i like",
+                "my favourite",
+                "my favorite"
+            ]
+
+        }
+
+    # =====================================================
+    # Keyword Score
+    # =====================================================
+
+    def _score(self, text: str, words):
+
+        score = 0
+
+        for word in words:
+
+            if word in text:
+                score += 1
+
+        return score
+
+    # =====================================================
+    # Intent Detection
+    # =====================================================
+
     def detect(self, message: str) -> IntentType:
 
         text = message.lower().strip()
 
-        # ------------------------
-        # App Control
-        # ------------------------
+        # =====================================================
+        # Special Rule : Open Installed Applications
+        # =====================================================
 
-        app_keywords = [
+        launch_words = [
             "open",
             "launch",
             "start",
-            "close",
-            "kill",
-            "exit"
+            "run"
         ]
 
-        if any(word in text for word in app_keywords):
-            return IntentType.APP_CONTROL
-
-        # ------------------------
-        # Browser
-        # ------------------------
-
-        browser_keywords = [
-            "google",
-            "search",
-            "youtube",
-            "website",
-            "browser",
+        installed_apps = [
             "chrome",
-            "edge"
+            "edge",
+            "firefox",
+            "notepad",
+            "calculator",
+            "paint",
+            "cmd",
+            "terminal",
+            "powershell",
+            "vscode",
+            "visual studio code",
+            "spotify",
+            "discord",
+            "steam",
+            "explorer"
         ]
 
-        if any(word in text for word in browser_keywords):
-            return IntentType.BROWSER
-
-        # ------------------------
-        # File
-        # ------------------------
-
-        file_keywords = [
-            "file",
-            "folder",
-            "copy",
-            "move",
-            "delete",
-            "rename",
-            "excel",
-            "pdf"
+        website_words = [
+            ".com",
+            ".org",
+            ".net",
+            ".io",
+            "website",
+            "google.com",
+            "youtube.com"
         ]
 
-        if any(word in text for word in file_keywords):
-            return IntentType.FILE
+        if any(word in text for word in launch_words):
 
-        # ------------------------
-        # Memory
-        # ------------------------
+            if any(site in text for site in website_words):
+                pass
 
-        memory_keywords = [
-            "remember",
-            "my name",
-            "i like",
-            "my favourite",
-            "my favorite"
-        ]
+            elif any(app in text for app in installed_apps):
+                return IntentType.APP_CONTROL
 
-        if any(word in text for word in memory_keywords):
-            return IntentType.MEMORY
+        # =====================================================
+        # Score Based Detection
+        # =====================================================
 
-        # ------------------------
-        # Coding
-        # ------------------------
+        scores = {}
 
-        coding_keywords = [
-            "python",
-            "java",
-            "javascript",
-            "react",
-            "bug",
-            "code",
-            "program",
-            "api"
-        ]
+        for intent, words in self.keywords.items():
 
-        if any(word in text for word in coding_keywords):
-            return IntentType.CODING
+            scores[intent] = self._score(
+                text,
+                words
+            )
 
-        # ------------------------
-        # System
-        # ------------------------
+        # =====================================================
+        # Priority Bonus
+        # =====================================================
 
-        system_keywords = [
-            "cpu",
-            "ram",
-            "battery",
-            "system",
-            "performance",
-            "optimize",
-            "storage"
-        ]
+        if scores[IntentType.CODING]:
+            scores[IntentType.CODING] += 3
 
-        if any(word in text for word in system_keywords):
-            return IntentType.SYSTEM
+        if scores[IntentType.MEMORY]:
+            scores[IntentType.MEMORY] += 2
 
-        return IntentType.CHAT
+        best_intent = max(
+            scores,
+            key=scores.get
+        )
+
+        if scores[best_intent] == 0:
+            return IntentType.CHAT
+
+        return best_intent
 
 
 intent_detector = IntentDetector()

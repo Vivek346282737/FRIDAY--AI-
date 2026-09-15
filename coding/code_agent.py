@@ -1,4 +1,8 @@
-from ai.brain import ask_ai
+from ai.brain import brain
+from ai.planner import planner
+from ai.reasoner import reasoner
+
+from coding.code_memory import code_memory
 
 from coding.terminal_agent import terminal_agent
 from coding.error_reader import error_reader
@@ -12,7 +16,14 @@ class CodeAgent:
     def __init__(self):
 
         self.max_iterations = 5
+
         self.history = []
+
+        self.last_prompt = ""
+
+        self.last_fix = ""
+
+        self.last_analysis = None
 
     # ====================================================
     # History
@@ -22,7 +33,11 @@ class CodeAgent:
 
         self.history = []
 
-    def add_history(self, title, data):
+    def add_history(
+        self,
+        title,
+        data
+    ):
 
         self.history.append(
             {
@@ -30,8 +45,7 @@ class CodeAgent:
                 "data": data
             }
         )
-
-    # ====================================================
+            # ====================================================
     # Terminal
     # ====================================================
 
@@ -94,6 +108,28 @@ class CodeAgent:
         return result
 
     # ====================================================
+    # Write File
+    # ====================================================
+
+    def write(
+        self,
+        file,
+        content
+    ):
+
+        result = patcher.write(
+            file,
+            content
+        )
+
+        self.add_history(
+            "write",
+            result
+        )
+
+        return result
+
+    # ====================================================
     # Replace Text
     # ====================================================
 
@@ -140,8 +176,7 @@ class CodeAgent:
         )
 
         return result
-
-    # ====================================================
+        # ====================================================
     # Insert Line
     # ====================================================
 
@@ -196,7 +231,9 @@ class CodeAgent:
         file
     ):
 
-        result = vscode_agent.open_file(file)
+        result = vscode_agent.open_file(
+            file
+        )
 
         self.add_history(
             "open_file",
@@ -218,6 +255,8 @@ class CodeAgent:
             execution
         )
 
+        self.last_analysis = result
+
         self.add_history(
             "analysis",
             result
@@ -226,7 +265,7 @@ class CodeAgent:
         return result
 
     # ====================================================
-    # Ask AI
+    # Ask Brain
     # ====================================================
 
     def ask(
@@ -234,7 +273,13 @@ class CodeAgent:
         prompt
     ):
 
-        answer = ask_ai(prompt)
+        answer = brain.ask(
+            prompt
+        )
+
+        self.last_prompt = prompt
+
+        self.last_fix = answer
 
         self.add_history(
             "llm",
@@ -242,38 +287,143 @@ class CodeAgent:
         )
 
         return answer
-
+        # ====================================================
+    # Insert Line
     # ====================================================
-    # Prompt Builder
-    # ====================================================
 
-    def build_prompt(
+    def insert_line(
         self,
         file,
-        code,
-        analysis
+        line,
+        text
     ):
 
-        return f"""
-You are an expert Python software engineer.
+        result = patcher.insert_line(
+            file,
+            line,
+            text
+        )
 
-Fix ONLY the given file.
+        self.add_history(
+            "insert_line",
+            result
+        )
 
-Return ONLY corrected code.
+        return result
 
-File:
+    # ====================================================
+    # Delete Line
+    # ====================================================
 
-{file}
+    def delete_line(
+        self,
+        file,
+        line
+    ):
 
-Current Code:
+        result = patcher.delete_line(
+            file,
+            line
+        )
 
-{code}
+        self.add_history(
+            "delete_line",
+            result
+        )
 
-Error:
+        return result
 
-{analysis}
-"""
+    # ====================================================
+    # VS Code
+    # ====================================================
+
+    def open_file(
+        self,
+        file
+    ):
+
+        result = vscode_agent.open_file(
+            file
+        )
+
+        self.add_history(
+            "open_file",
+            result
+        )
+
+        return result
+
+    # ====================================================
+    # Error Analysis
+    # ====================================================
+
+    def analyze(
+        self,
+        execution
+    ):
+
+        result = error_reader.analyze(
+            execution
+        )
+
+        self.last_analysis = result
+
+        self.add_history(
+            "analysis",
+            result
+        )
+
+        return result
+
+    # ====================================================
+    # Ask Brain
+    # ====================================================
+
+    def ask(
+        self,
+        prompt
+    ):
+
+        answer = brain.ask(
+            prompt
+        )
+
+        self.last_prompt = prompt
+
+        self.last_fix = answer
+
+        self.add_history(
+            "llm",
+            answer
+        )
+
+        return answer
         # ====================================================
+    # Clean AI Output
+    # ====================================================
+
+    def clean_code(
+        self,
+        code: str
+    ):
+
+        if not code:
+            return ""
+
+        code = code.strip()
+
+        if code.startswith("```python"):
+            code = code[9:]
+
+        elif code.startswith("```"):
+            code = code[3:]
+
+        if code.endswith("```"):
+            code = code[:-3]
+
+        return code.strip()
+
+    # ====================================================
     # Auto Repair
     # ====================================================
 
@@ -285,7 +435,10 @@ Error:
 
         self.reset()
 
-        for attempt in range(1, self.max_iterations + 1):
+        for attempt in range(
+            1,
+            self.max_iterations + 1
+        ):
 
             verification = self.verify(
                 verify_command
@@ -303,47 +456,101 @@ Error:
                 verification
             )
 
-            source = self.read(file)
+            source = self.read(
+                file
+            )
 
             if not source["success"]:
 
                 return source
 
             prompt = self.build_prompt(
+
                 file=file,
+
                 code=source["content"],
+
                 analysis=analysis["summary"]
+
             )
 
-            fixed_code = self.ask(prompt)
+            fixed_code = self.ask(
+                prompt
+            )
+
+            fixed_code = self.clean_code(
+                fixed_code
+            )
 
             if not fixed_code:
 
                 return {
+
                     "success": False,
-                    "message": "LLM returned empty response.",
+
+                    "message": "AI returned empty code.",
+
                     "history": self.history
+
                 }
 
-            patcher.write(
+            backup = patcher.backup(
+                file
+            )
+
+            self.add_history(
+                "backup",
+                backup
+            )
+
+            write_result = self.write(
                 file,
                 fixed_code
             )
 
+            if not write_result["success"]:
+
+                return write_result
+
             self.add_history(
                 "patched",
                 {
+                    "attempt": attempt,
                     "file": file
                 }
             )
 
-        return {
-            "success": False,
-            "message": "Maximum repair attempts reached.",
-            "history": self.history
-        }
+            verify_after_patch = self.verify(
+                verify_command
+            )
 
-    # ====================================================
+            self.add_history(
+                "post_verify",
+                verify_after_patch
+            )
+
+            if verify_after_patch["success"]:
+
+                return {
+
+                    "success": True,
+
+                    "attempts": attempt,
+
+                    "history": self.history
+
+                }
+
+        return {
+
+            "success": False,
+
+            "message": "Maximum repair attempts reached.",
+
+            "history": self.history
+
+        }
+        # ====================================================
     # Simple Compile
     # ====================================================
 
@@ -368,7 +575,8 @@ Error:
         return self.run_command(
             f"python {file}"
         )
-        # ====================================================
+
+    # ====================================================
     # Fix Python File
     # ====================================================
 
@@ -378,8 +586,11 @@ Error:
     ):
 
         return self.auto_fix(
+
             file=file,
+
             verify_command=f"python -m py_compile {file}"
+
         )
 
     # ====================================================
@@ -393,60 +604,29 @@ Error:
 
         self.reset()
 
-        for attempt in range(1, self.max_iterations + 1):
+        execution = self.execute_python(
+            file
+        )
 
-            execution = self.execute_python(file)
+        if execution["success"]:
 
-            if execution["success"]:
+            return {
 
-                return {
-                    "success": True,
-                    "attempts": attempt,
-                    "history": self.history
-                }
+                "success": True,
 
-            analysis = self.analyze(execution)
+                "message": "Program executed successfully.",
 
-            source = self.read(file)
+                "history": self.history
 
-            if not source["success"]:
+            }
 
-                return source
+        return self.auto_fix(
 
-            prompt = self.build_prompt(
-                file=file,
-                code=source["content"],
-                analysis=analysis["summary"]
-            )
+            file=file,
 
-            fixed_code = self.ask(prompt)
+            verify_command=f"python {file}"
 
-            if not fixed_code:
-
-                return {
-                    "success": False,
-                    "message": "AI returned empty response.",
-                    "history": self.history
-                }
-
-            patcher.write(
-                file,
-                fixed_code
-            )
-
-            self.add_history(
-                "patched",
-                {
-                    "attempt": attempt,
-                    "file": file
-                }
-            )
-
-        return {
-            "success": False,
-            "message": "Unable to repair the program.",
-            "history": self.history
-        }
+        )
 
     # ====================================================
     # Repair Project
@@ -461,13 +641,18 @@ Error:
 
         for file in files:
 
-            result = self.fix_python_file(file)
+            result = self.fix_python_file(
+                file
+            )
 
             results.append(
 
                 {
+
                     "file": file,
+
                     "result": result
+
                 }
 
             )

@@ -1,155 +1,109 @@
-from ai.brain import ask_ai
-
-from agent.coordinator import coordinator
-
-from vision.screen_analyzer import screen
+﻿from agent.coordinator import coordinator
 
 
 class AgentLoop:
 
+    def __init__(self):
+
+        self.max_iterations = 5
+
+    # =====================================================
+    # Run
+    # =====================================================
+
     def run(
+
         self,
+
         message: str,
+
         memory: str = "",
-        conversation: str = "",
-        max_steps: int = 10
+
+        conversation: str = ""
+
     ):
 
-        history = []
+        return coordinator.process(
 
-        current_message = message
+            message,
 
-        for step in range(max_steps):
+            memory,
 
-            print("\n" + "=" * 70)
-            print(f"STEP {step + 1}")
-            print("=" * 70)
+            conversation
 
-            # =====================================
-            # THINK
-            # =====================================
+        )
 
-            reply = ask_ai(
-                current_message,
-                memory,
-                conversation
-            )
+    # =====================================================
+    # Future Voice Mode
+    # =====================================================
 
-            print("\nAI REPLY\n")
-            print(reply)
+    def run_forever(self):
 
-            history.append({
-                "step": step + 1,
-                "reply": reply
-            })
-
-            # =====================================
-            # FINAL ANSWER
-            # =====================================
-
-            if not reply.startswith("ACTION:"):
-
-                print("\nFINAL RESPONSE\n")
-
-                return {
-                    "success": True,
-                    "reply": reply,
-                    "history": history
-                }
-
-            # =====================================
-            # EXECUTE USING COORDINATOR
-            # =====================================
-
-            execution = coordinator.execute(reply)
-
-            print("\nEXECUTION\n")
-            print(execution)
-
-            history.append({
-                "step": step + 1,
-                "execution": execution
-            })
-
-            if not execution:
-
-                return {
-                    "success": False,
-                    "message": "Execution failed.",
-                    "history": history
-                }
-
-            # =====================================
-            # OBSERVE
-            # =====================================
-
-            print("\nOBSERVING SCREEN...\n")
+        while True:
 
             try:
 
-                observation = screen.summary()
+                message = input(
 
-            except Exception as e:
+                    "You: "
 
-                observation = f"Vision Error: {e}"
+                )
 
-            print(observation)
+                if message.lower() in [
 
-            history.append({
-                "step": step + 1,
-                "observation": observation
-            })
+                    "exit",
 
-            # =====================================
-            # THINK AGAIN
-            # =====================================
+                    "quit",
 
-            current_message = f"""
-The previous action has finished.
+                    "bye"
 
-Original user request:
+                ]:
 
-{message}
+                    print(
 
-Previous action:
+                        "FRIDAY: Goodbye, Vivek."
 
-{reply}
+                    )
 
-Execution result:
+                    break
 
-{execution}
+                result = self.run(
 
-Current screen:
+                    message
 
-{observation}
+                )
 
-Decide what to do next.
+                print()
 
-Rules:
+                print(
 
-1. If the user's request is fully complete,
-respond naturally.
+                    "FRIDAY:"
 
-2. If another action is needed,
-return ONLY another ACTION.
+                )
 
-3. Never repeat the exact same ACTION unless absolutely necessary.
+                print(
 
-4. Use the current screen to decide.
+                    result.get(
 
-5. Use Browser, Desktop, Vision and Coding tools whenever appropriate.
+                        "message",
 
-6. Think like Tony Stark's FRIDAY.
-"""
+                        ""
 
-            print("\nNEXT PROMPT\n")
-            print(current_message)
+                    )
 
-        return {
-            "success": False,
-            "message": "Maximum reasoning steps reached.",
-            "history": history
-        }
+                )
+
+                print()
+
+            except KeyboardInterrupt:
+
+                print(
+
+                    "\nStopping FRIDAY..."
+
+                )
+
+                break
 
 
 agent_loop = AgentLoop()
